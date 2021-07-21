@@ -1,0 +1,31 @@
+<HomeScreen>
+    id: my_widget
+    title: title
+    import_btn: import_btn
+    GridLayout:
+        cols:1
+        size: root.width, root.height
+
+        Label:
+            id: title
+            text: "Cellsy"
+            size_hint_y: None
+            height: 100
+
+        Button:
+            id: import_btn
+            text: "Import"
+            size_hint_y: None
+            height: 100
+            on_press: root.import_image()
+
+        FileChooserIconView:
+            id: filechooser
+            size_hint_y: None
+            height: 0
+            on_selection: my_widget.selected(filechooser.selection)
+        
+        Image:
+            id: img
+            size_hint_y: None
+            height: 0
