@@ -1,31 +1,55 @@
 <HomeScreen>
     id: my_widget
-    title: title
     import_btn: import_btn
+    confirm_import_btn: confirm_import_btn
+    filechooser: filechooser
+    image_widget:image_widget
+    # img:img
+    # img2:img2
+    
     GridLayout:
         cols:1
         size: root.width, root.height
-
-        Label:
-            id: title
-            text: "Cellsy"
-            size_hint_y: None
-            height: 100
 
         Button:
             id: import_btn
             text: "Import"
             size_hint_y: None
             height: 100
-            on_press: root.import_image()
+            on_press: root.import_btn_pressed()
+        
+        Button:
+            id: confirm_import_btn
+            text: "Confirm Import"
+            size_hint_y: None
+            height: 100
+            on_press: root.confirm_import_btn_pressed()
 
         FileChooserIconView:
             id: filechooser
+            multiselect: True
             size_hint_y: None
             height: 0
-            on_selection: my_widget.selected(filechooser.selection)
-        
-        Image:
-            id: img
-            size_hint_y: None
-            height: 0
+            on_selection: my_widget.image_selected(filechooser.selection)
+
+        GridLayout:
+            cols:2
+
+            GridLayout:
+                cols:1
+
+                Label:
+                    text:'Image Controls'
+                    size_hint_y:None
+                    height:100
+                
+                GridLayout:
+                    cols: 2
+                    Label:
+                        text: "Stack Images"
+                    CheckBox:
+                        on_active: root.stack_images_checkbox_click(self,self.active)
+
+            GridLayout:
+                id:image_widget
+                cols:1
