@@ -61,7 +61,7 @@ class HomeScreen(Widget):
         self.hide_widget(confirm_import_btn,False)
 
     def delete_image(self,id):
-        #NEED TO FIX
+        #-----NEED TO FIX-----NEED TO FIX-----NEED TO FIX-----NEED TO FIX-----NEED TO FIX
         print(id)
         image_widget = self.ids.image_widget
         for widget in image_widget.children:
@@ -157,17 +157,45 @@ class HomeScreen(Widget):
         output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
     
     def stack_checkbox_click(self, instance, value):
+        global images
         if value:
-            self.stack()
+            if len(images)>=2:
+                self.stack()
+            else:
+                pass
         else:
             self.clear_output()
     
     def binarize(self):
-        pass
+        global images
+        image = images[0]
+
+        image = pil_Image.open(image)
+        image = np.array(image)
+        x = image.shape[0]
+        y = image.shape[1]
+
+        #----Manual Thresholding----#
+        threshold_val = 100 #Range 0-255
+        binary_image = image > threshold_val #Extract only the pixels whose magnitude is greater than the threshold value
+
+        stacked_image2 = np.zeros((x,y,3),dtype="uint8") #Same as before
+        stacked_image2[:,:,0] = binary_image * 255 #Fill in the all channels with binary image ... multiply by 255 to make it bright white
+        stacked_image2[:,:,1] = binary_image * 255 
+        stacked_image2[:,:,2] = binary_image * 255
+
+        img_RGB2 = pil_Image.fromarray(stacked_image2, 'RGB')
+        plt.imshow(stacked_image2) #Black and white image... white or black pixels
+        output_widget = self.ids.output_widget
+        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
 
     def binarize_checkbox_click(self, instance, value):
+        global images
         if value:
-            self.binarize()
+            if len(images)>0:
+                self.binarize()
+            else:
+                pass
         else:
             self.clear_output()
 
@@ -243,17 +271,63 @@ class HomeScreen(Widget):
             trace_myosin(image)
 
     def trace_checkbox_click(self, instance, value):
+        global images
         if value:
-            self.trace()
+            if len(images)>0:
+                self.trace()
+            else:
+                pass
         else:
             self.clear_output()
 
     def trace_stack(self):
-        pass
+        #----Tracing Myosin Network and Cell Outlines----#
+        #Tracing done in MATLAB, data stored in csv files on drive. Import csv files
+        path_cell_outline = "/Users/mannendriolivares/Desktop/ENG/cell_outline.csv" #File paths for two csv files on drive
+        path_myosin_network = "/Users/mannendriolivares/Desktop/ENG/myosin_network.csv"
 
+        cell_outline = pd.read_csv(path_cell_outline) #Converts to Pandas dataframe... not great for image processing 
+        myosin_network = pd.read_csv(path_myosin_network)
+
+        cell_outline = cell_outline.to_numpy() #Converts Pandas dataframe to numpy array
+        myosin_network = myosin_network.to_numpy()
+
+        x = cell_outline.shape[0]
+        y = cell_outline.shape[1]
+
+        #Needed because size of csv is 479 by 640 and size of image is 480 by 640.
+        empty_row = np.zeros((1,y),dtype="uint8") #Literally an empyty row
+        cell_outline = np.vstack([empty_row, cell_outline]) # Adding a blank row above all other data to make it 480 by 640
+        myosin_network = np.vstack([empty_row, myosin_network])
+
+        #----Trace of Myosin Network and cell Outline----#
+        x = cell_outline.shape[0]
+        y = cell_outline.shape[1]
+
+        traced_networks = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
+        traced_networks[:,:,0] = cell_outline * 255 #Fill in red channel with binary cell outline ... multiply by 255 to make it bright red
+        traced_networks[:,:,1] = myosin_network * 255 #Fill in green with binary myosin network ... multiply by 255 to make it bright green
+
+        plt.figure(figsize = (5,10),dpi = 200) #Makes the below figure larger with higher resolution
+        plt.imshow(traced_networks)
+        plt.axis('off')
+        output_widget = self.ids.output_widget
+        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+    
     def trace_stack_checkbox_click(self, instance, value):
+        global images
         if value:
-            self.trace_stack()
+            myosin_in_input = False
+            membrane_in_input = False
+            for image in images:
+                if "membrane" in image.lower():
+                    membrane_in_input = True
+                if "myosin" in image.lower():
+                    myosin_in_input = True
+            if membrane_in_input and myosin_in_input:
+                self.trace_stack()
+            else:
+                pass
         else:
             self.clear_output()
 
@@ -261,7 +335,7 @@ class HomeScreen(Widget):
 
 class CellsyApp(App):
     def build(self):
-        Window.clearcolor = (47/255,79/255,79/255,1)
+        Window.clearcolor = (190/255,155/255,242/255,1)
         return HomeScreen()
 
 if __name__ == "__main__":
