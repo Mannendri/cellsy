@@ -3,9 +3,9 @@
     import_btn: import_btn
     confirm_import_btn: confirm_import_btn
     filechooser: filechooser
+    image_controls_widget:image_controls_widget
     image_widget:image_widget
-    # img:img
-    # img2:img2
+    output_widget:output_widget
     
     GridLayout:
         cols:1
@@ -28,28 +28,65 @@
         FileChooserIconView:
             id: filechooser
             multiselect: True
-            size_hint_y: None
-            height: 0
             on_selection: my_widget.image_selected(filechooser.selection)
+
 
         GridLayout:
             cols:2
 
             GridLayout:
+                id: image_controls_widget
                 cols:1
+                size_hint_x: None
+                width: 500
 
+                canvas.before:
+                    Color:
+                        rgba: 139/255, 0, 0, 1.0
+                    Rectangle:
+                        size: self.size
+                        pos: self.pos
                 Label:
                     text:'Image Controls'
+                    bold: True
                     size_hint_y:None
                     height:100
                 
                 GridLayout:
                     cols: 2
+
                     Label:
-                        text: "Stack Images"
+                        text: "Stack"
                     CheckBox:
-                        on_active: root.stack_images_checkbox_click(self,self.active)
+                        on_active: root.stack_checkbox_click(self,self.active)
+                    
+                    Label:
+                        text: "Binarize"
+                    CheckBox:
+                        on_active: root.binarize_checkbox_click(self,self.active)
+                    
+                    Label:
+                        text: "Trace"
+                    CheckBox:
+                        on_active: root.trace_checkbox_click(self,self.active)
+                    
+                    Label:
+                        text: "Trace & Stack"
+                    CheckBox:
+                        on_active: root.trace_stack_checkbox_click(self,self.active)
 
             GridLayout:
                 id:image_widget
                 cols:1
+        
+        GridLayout:
+            id: output_widget
+            cols:1
+            size_hint_y:None
+            height:400
+
+            Label:
+                text:'Output'
+                bold: True
+                size_hint_y:None
+                height:100

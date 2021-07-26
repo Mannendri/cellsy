@@ -1,50 +1,147 @@
 #Kivy Imports
 import kivy
 from kivy.app import App
+from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.uix.image import Image
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
 from kivy.garden.matplotlib import FigureCanvasKivyAgg
 
 #Image Analysis Imports
 from PIL import Image as pil_Image
 import matplotlib.pyplot as plt
 import numpy as np
-
-global images
-images = []
+import pandas as pd
 
 class HomeScreen(Widget):
+    global images
+    global image_id
+    images = []
+    image_id = 1
+    
+    #---------------IMPORT CONTROLS------------------#
+    def hide_widget(self,wid, dohide=True):
+        if hasattr(wid, 'saved_attrs'):
+            if not dohide:
+                wid.height, wid.size_hint_y, wid.opacity, wid.disabled = wid.saved_attrs
+                del wid.saved_attrs
+                return False
+        elif dohide:
+            wid.saved_attrs = wid.height, wid.size_hint_y, wid.opacity, wid.disabled
+            wid.height, wid.size_hint_y, wid.opacity, wid.disabled = 0, None, 0, True
+            return True
+    
+    def __init__(self) -> None:
+        super().__init__()
+        filechooser = self.ids.filechooser
+        self.hide_widget(filechooser,True)
+        confirm_import_btn = self.ids.confirm_import_btn
+        self.hide_widget(confirm_import_btn, True)
 
     def import_btn_pressed(self):
-        filechooser = self.ids.filechooser
-        filechooser.size_hint_y = 1
-    
-    def image_selected(self, filename):
-        try:
-            global images
-            for file in filename:
-                images.append(file)
-        except:
-            pass
-    
-    def confirm_import_btn_pressed(self):
-        filechooser = self.ids.filechooser
-        filechooser.size_hint_y = None
-        filechooser.height = 0
-        for filename in images:
-            image = Image(source = filename
-            )
-            image_widget = self.ids.image_widget
-            image_widget.add_widget(image)
-        filechooser.selection = []
+        #Hide image controls, images, and output
+        image_controls_widget = self.ids.image_controls_widget
+        image_widget = self.ids.image_widget
+        output_widget = self.ids.output_widget
+        self.hide_widget(image_controls_widget, True)
+        self.hide_widget(image_widget, True)
+        self.hide_widget(output_widget, True)
 
-    def stack_images_2_color_channels(self):
+        filechooser = self.ids.filechooser
+        self.hide_widget(filechooser,False)
+    
+    def image_selected(self, filenames):
         global images
+        for file in filenames:
+            if file not in images:
+                images.append(file)
+        confirm_import_btn = self.ids.confirm_import_btn
+        self.hide_widget(confirm_import_btn,False)
+
+    def delete_image(self,id):
+        #NEED TO FIX
+        print(id)
+        image_widget = self.ids.image_widget
+        for widget in image_widget.children:
+            if isinstance(widget, GridLayout) and widget.id == id:
+                image_widget.remove_widget(widget)
+
+    def confirm_import_btn_pressed(self):
+        # Show image controls, images, and output; hide the filechooser
+        image_controls_widget = self.ids.image_controls_widget
+        image_widget = self.ids.image_widget
+        output_widget = self.ids.output_widget
+        filechooser = self.ids.filechooser
+        self.hide_widget(image_controls_widget, False)
+        self.hide_widget(image_widget, False)
+        self.hide_widget(output_widget, False)
+        self.hide_widget(filechooser,True)
+
+        global images
+        global image_id
+        
+        for filename in images:
+            if filename not in filechooser.selection:
+                images.remove(filename)
+
+        for filename in images:
+            image_grid = GridLayout(cols=1)
+            image_grid.id = image_id
+
+            image = Image(source = filename)
+
+            delete_btn = Button(
+                text = "Delete",
+                size_hint_y = None,
+                height = 75
+            )
+            delete_btn.bind(on_press=lambda x: self.delete_image(image_grid.id))
+
+            image_grid.add_widget(image)
+            image_grid.add_widget(delete_btn)
+
+            image_widget = self.ids.image_widget
+            image_widget.add_widget(image_grid)
+            image_id+=1
+
+            print(image_grid.id)
+
+        filechooser.selection = []
+        confirm_import_btn = self.ids.confirm_import_btn
+        self.hide_widget(confirm_import_btn)
+
+
+    #---------------IMAGE CONTROLS------------------#
+    def clear_output(self):
+        output_widget = self.ids.output_widget
+        for widget in output_widget.children:
+            if isinstance(widget, Label): continue
+            output_widget.remove_widget(widget)
+
+    def stack(self):
+        #Fixes:
+        #and I need to specifically use the path of the image file to determine
+        #which is which
+
+        global images
+        membrane = None
+        myosin = None
+        if len(images)==0:
+            return True
         #----Read the images----#
-        myosin = pil_Image.open(images[-1])
+        # for image in images:
+        #     print(image)
+        #     if "membrane" in image.lower():
+        #         membrane = pil_Image.open(image)
+        #     elif "myosin" in image.lower():
+        #         myosin = pil_Image.open(image)
         membrane = pil_Image.open(images[0])
+        myosin = pil_Image.open(images[1])
 
         #----Convert to NumPy arrays----#
+        print(membrane)
         myosin = np.array(myosin)
         membrane = np.array(membrane)
         x = membrane.shape[0]
@@ -56,17 +153,115 @@ class HomeScreen(Widget):
 
         img_RGB = pil_Image.fromarray(stacked_images, 'RGB' )
         plt.imshow(img_RGB, cmap="Reds")
-        image_widget = self.ids.image_widget
-        image_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+        output_widget = self.ids.output_widget
+        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
     
-    def stack_images_checkbox_click(self, instance, value):
+    def stack_checkbox_click(self, instance, value):
         if value:
-            self.stack_images_2_color_channels()
+            self.stack()
         else:
-            pass
+            self.clear_output()
+    
+    def binarize(self):
+        pass
+
+    def binarize_checkbox_click(self, instance, value):
+        if value:
+            self.binarize()
+        else:
+            self.clear_output()
+
+    def trace(self):
+        global images
+        image = images[0]
+
+        def trace_cell_outline(image):
+            membrane = pil_Image.open(image)
+            membrane = np.array(membrane)
+            x = membrane.shape[0]
+            y = membrane.shape[1]
+            #----Tracing Cell Outline----#
+            #Tracing done in MATLAB, data stored in csv files on drive. Import csv files
+            path_cell_outline = "/Users/mannendriolivares/Desktop/ENG/cell_outline.csv"
+            cell_outline = pd.read_csv(path_cell_outline) #Converts to Pandas dataframe... not great for image processing 
+            cell_outline = cell_outline.to_numpy() #Converts Pandas dataframe to numpy array
+
+            #Needed because size of csv is 479 by 640 and size of image is 480 by 640
+            empty_row = np.zeros((1,y),dtype="uint8") #Literaly an empyty row
+            cell_outline = np.vstack([empty_row, cell_outline])
+
+            #----Cell Outline With Trace----#
+            membrane_without_trace = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
+            membrane_without_trace[:,:,0] = membrane #Red Channel is the membrane image
+
+            membrane_with_trace = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
+            membrane_with_trace[:,:,2] = cell_outline * 255 #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
+            membrane_with_trace[:,:,0] = membrane #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
+
+            membrane_net = np.hstack([membrane_without_trace, membrane_with_trace]) #Horizontally combine images
+
+            plt.figure(figsize = (10,10),dpi = 200)
+            plt.imshow(membrane_net) 
+            plt.axis('off')
+            output_widget = self.ids.output_widget
+            output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+
+        def trace_myosin(image):
+            myosin = pil_Image.open(image)
+            myosin = np.array(myosin)
+            x = myosin.shape[0]
+            y = myosin.shape[1]
+            #----Tracing Myosin Network----#
+            #Tracing done in MATLAB, data stored in csv files on drive. Import csv files
+            path_myosin_network = "/Users/mannendriolivares/Desktop/ENG/myosin_network.csv"
+            myosin_network = pd.read_csv(path_myosin_network) #Converts to Pandas dataframe... not great for image processing 
+            myosin_network = myosin_network.to_numpy() #Converts Pandas dataframe to numpy array
+
+            #Needed because size of csv is 479 by 640 and size of image is 480 by 640
+            empty_row = np.zeros((1,y),dtype="uint8") #Literaly an empyty row
+            myosin_network = np.vstack([empty_row, myosin_network])
+
+            #----Myosin Network with Trace----#
+            myosin_without_trace = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
+            myosin_without_trace[:,:,1] = myosin #Green Channel is the myosin image
+
+            myosin_with_trace = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
+            myosin_with_trace[:,:,0] = myosin_network * 255 #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
+            myosin_with_trace[:,:,1] = myosin #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
+
+            myosin_net = np.hstack([myosin_without_trace, myosin_with_trace]) #Horizontally combine images
+
+            plt.figure(figsize = (10,10),dpi = 200)
+            plt.imshow(myosin_net)
+            plt.axis('off')
+            output_widget = self.ids.output_widget
+            output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+        
+        if "membrane" in image.lower():
+            trace_cell_outline(image)
+        else:
+            trace_myosin(image)
+
+    def trace_checkbox_click(self, instance, value):
+        if value:
+            self.trace()
+        else:
+            self.clear_output()
+
+    def trace_stack(self):
+        pass
+
+    def trace_stack_checkbox_click(self, instance, value):
+        if value:
+            self.trace_stack()
+        else:
+            self.clear_output()
+
+    
 
 class CellsyApp(App):
     def build(self):
+        Window.clearcolor = (47/255,79/255,79/255,1)
         return HomeScreen()
 
 if __name__ == "__main__":
