@@ -18,8 +18,10 @@ import pandas as pd
 class HomeScreen(Widget):
     global images
     global image_id
+    global output_id
     images = []
     image_id = 1
+    output_id = 0
     
     #---------------IMPORT CONTROLS------------------#
     def hide_widget(self,wid, dohide=True):
@@ -95,7 +97,7 @@ class HomeScreen(Widget):
             delete_btn = Button(
                 text = "Delete",
                 size_hint_y = None,
-                height = 75
+                height = 50
             )
             delete_btn.bind(on_press=lambda x: self.delete_image(image_grid.id))
 
@@ -112,6 +114,15 @@ class HomeScreen(Widget):
         confirm_import_btn = self.ids.confirm_import_btn
         self.hide_widget(confirm_import_btn)
 
+    def save_btn_pressed(self):
+        global output_id
+        image = []
+        output_widget = self.ids.output_widget
+        for widget in output_widget.children:
+            if isinstance(widget,FigureCanvasKivyAgg):
+                image = widget.id
+        image = image.save("/Users/mannendriolivares/Desktop/ENG/output" + str(output_id) + ".png")
+        output_id+=1
 
     #---------------IMAGE CONTROLS------------------#
     def clear_output(self):
@@ -154,8 +165,10 @@ class HomeScreen(Widget):
         img_RGB = pil_Image.fromarray(stacked_images, 'RGB' )
         plt.imshow(img_RGB, cmap="Reds")
         output_widget = self.ids.output_widget
-        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
-    
+        figure = FigureCanvasKivyAgg(plt.gcf())
+        figure.id = img_RGB
+        output_widget.add_widget(figure)
+
     def stack_checkbox_click(self, instance, value):
         global images
         if value:
@@ -179,15 +192,17 @@ class HomeScreen(Widget):
         threshold_val = 100 #Range 0-255
         binary_image = image > threshold_val #Extract only the pixels whose magnitude is greater than the threshold value
 
-        stacked_image2 = np.zeros((x,y,3),dtype="uint8") #Same as before
-        stacked_image2[:,:,0] = binary_image * 255 #Fill in the all channels with binary image ... multiply by 255 to make it bright white
-        stacked_image2[:,:,1] = binary_image * 255 
-        stacked_image2[:,:,2] = binary_image * 255
+        stacked_images = np.zeros((x,y,3),dtype="uint8") #Same as before
+        stacked_images[:,:,0] = binary_image * 255 #Fill in the all channels with binary image ... multiply by 255 to make it bright white
+        stacked_images[:,:,1] = binary_image * 255 
+        stacked_images[:,:,2] = binary_image * 255
 
-        img_RGB2 = pil_Image.fromarray(stacked_image2, 'RGB')
-        plt.imshow(stacked_image2) #Black and white image... white or black pixels
+        img_RGB = pil_Image.fromarray(stacked_images, 'RGB')
+        plt.imshow(stacked_images) #Black and white image... white or black pixels
+        figure = FigureCanvasKivyAgg(plt.gcf())
+        figure.id = img_RGB
         output_widget = self.ids.output_widget
-        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+        output_widget.add_widget(figure)
 
     def binarize_checkbox_click(self, instance, value):
         global images
@@ -227,12 +242,15 @@ class HomeScreen(Widget):
             membrane_with_trace[:,:,0] = membrane #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
 
             membrane_net = np.hstack([membrane_without_trace, membrane_with_trace]) #Horizontally combine images
+            img_RBG = pil_Image.fromarray(membrane_net, 'RGB')
 
             plt.figure(figsize = (10,10),dpi = 200)
             plt.imshow(membrane_net) 
             plt.axis('off')
+            figure = FigureCanvasKivyAgg(plt.gcf())
+            figure.id = img_RBG
             output_widget = self.ids.output_widget
-            output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+            output_widget.add_widget(figure)
 
         def trace_myosin(image):
             myosin = pil_Image.open(image)
@@ -258,12 +276,15 @@ class HomeScreen(Widget):
             myosin_with_trace[:,:,1] = myosin #Fill in the all channels with binary cell outline ... multiply by 255 to make it bright red
 
             myosin_net = np.hstack([myosin_without_trace, myosin_with_trace]) #Horizontally combine images
+            img_RBG = pil_Image.fromarray(myosin_net, 'RGB')
 
             plt.figure(figsize = (10,10),dpi = 200)
             plt.imshow(myosin_net)
             plt.axis('off')
+            figure = FigureCanvasKivyAgg(plt.gcf())
+            figure.id = img_RBG
             output_widget = self.ids.output_widget
-            output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+            output_widget.add_widget(figure)
         
         if "membrane" in image.lower():
             trace_cell_outline(image)
@@ -307,12 +328,19 @@ class HomeScreen(Widget):
         traced_networks = np.zeros((x,y,3),dtype="uint8") #Same as before ... New Image
         traced_networks[:,:,0] = cell_outline * 255 #Fill in red channel with binary cell outline ... multiply by 255 to make it bright red
         traced_networks[:,:,1] = myosin_network * 255 #Fill in green with binary myosin network ... multiply by 255 to make it bright green
-
-        plt.figure(figsize = (5,10),dpi = 200) #Makes the below figure larger with higher resolution
+        img_RBG = pil_Image.fromarray(traced_networks, 'RGB')
+        
+        scale_factor = 10
+        height = 480/100
+        width = 640/100
+        plt.figure(figsize = (height*scale_factor,width*scale_factor),dpi = 300)
+        # plt.figure(figsize = (5,10),dpi = 200) #Makes the below figure larger with higher resolution
         plt.imshow(traced_networks)
         plt.axis('off')
+        figure = FigureCanvasKivyAgg(plt.gcf())
+        figure.id = img_RBG
         output_widget = self.ids.output_widget
-        output_widget.add_widget(FigureCanvasKivyAgg(plt.gcf()))
+        output_widget.add_widget(figure)
     
     def trace_stack_checkbox_click(self, instance, value):
         global images

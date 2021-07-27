@@ -63,7 +63,7 @@
                         size: self.size
                         pos: self.pos
                 Label:
-                    text:'Image Controls'
+                    text:'--- Image Controls ---'
                     color: 0,0,0,1
                     bold: True
                     size_hint_y:None
@@ -101,7 +101,7 @@
                 cols:1
 
                 BackgroundLabel:
-                    text: 'Input'
+                    text: '--- Input ---'
                     color: 0,0,0,1
                     bold: True
                     size_hint_y:None
@@ -111,12 +111,19 @@
             id: output_widget
             cols:1
             size_hint_y:None
-            height:400
+            height:root.height*0.60
 
             BackgroundLabel:
-                text: 'Output'
+                text: '--- Output ---'
                 color: 0,0,0,1
                 bold: True
                 size_hint_y:None
                 height:100
                 background_color: 207/255, 242/255, 155/255, 1.0
+            
+            Button:
+                id: save_btn
+                text: "Save Output Image"
+                size_hint_y: None
+                height: 100
+                on_press: root.save_btn_pressed()
